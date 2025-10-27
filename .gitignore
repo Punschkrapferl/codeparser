@@ -1,28 +1,24 @@
-# Go build output
-/bin/
-/*.exe
-/*.out
-/*.test
+# Go build / cache
+bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
 
-# Go modules cache (optional, usually safe to include)
-vendor/
+# Go modules
+/vendor/
 
-# IDEs and editors
+# IDE / editor
 .idea/
 .vscode/
-*.iml
 
-# OS files
+# OS / temp files
 .DS_Store
 Thumbs.db
 
-# Temporary files
-*.tmp
-*.swp
+# Logs
 *.log
 
-# Project-specific folders you mentioned
+# Your extra folders
 files/
-
-# Tree-sitter cache (if any)
-*.tree-sitter
