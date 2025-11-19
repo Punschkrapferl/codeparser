@@ -1,4 +1,22 @@
-# Go build / cache
+# ========================
+# Python
+# ========================
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.env
+.venv/
+.pytest_cache/
+
+# Runtime outputs
+*.json
+*.jsonl
+repos/
+
+# ========================
+# Go
+# ========================
 bin/
 *.exe
 *.exe~
@@ -9,16 +27,26 @@ bin/
 # Go modules
 /vendor/
 
-# IDE / editor
+# ========================
+# IDE / Editor
+# ========================
 .idea/
 .vscode/
 
+# ========================
 # OS / temp files
+# ========================
 .DS_Store
 Thumbs.db
+*.swp
+*~
 
+# ========================
 # Logs
+# ========================
 *.log
 
-# Your extra folders
-files/
+# ========================
+# Build artifacts
+# ========================
+codeparser.exe

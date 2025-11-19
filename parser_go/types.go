@@ -1,4 +1,4 @@
-package utils
+package main
 
 type OutputChunk struct {
 	Path      string `json:"path"`
