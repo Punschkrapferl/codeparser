@@ -5,6 +5,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from api.main import app
+import api.helpers as helpers
 
 
 @pytest.fixture
@@ -32,11 +33,20 @@ def test_root_route(client: TestClient) -> None:
 # ------------------ /analyze (single file) ------------------
 
 
-def test_analyze_simple_python_file(client: TestClient) -> None:
+def test_analyze_simple_python_file(
+        client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """
     Upload a tiny python file and ensure /analyze returns the expected shape
-    and uses the dev stub LLM.
+    and that the LLM call is made (mocked for speed/determinism).
     """
+
+    async def fake_call_llm(_prompt: str) -> str:
+        return "FAKE_ANALYSIS_SIMPLE"
+
+    # _analyze_parts in api.helpers looks up call_llm there, so patch helpers.call_llm
+    monkeypatch.setattr(helpers, "call_llm", fake_call_llm)
+
     code = b"def add(a, b):\n    return a + b\n"
     files = {
         "file": ("sample.py", io.BytesIO(code), "text/x-python"),
@@ -57,8 +67,8 @@ def test_analyze_simple_python_file(client: TestClient) -> None:
     assert data["num_parts"] >= 1
     assert "python" in data["languages"]
 
-    # Make sure the dev stub was used
-    assert "DEV STUB ANALYSIS (no real LLM call)" in data["analysis"]
+    # Make sure our fake was used
+    assert "FAKE_ANALYSIS_SIMPLE" in data["analysis"]
 
 
 def test_analyze_empty_file_returns_no_parts(client: TestClient) -> None:
@@ -79,14 +89,22 @@ def test_analyze_empty_file_returns_no_parts(client: TestClient) -> None:
     assert data["filename"] == "empty.txt"
 
 
-# ------------------ /analyze-multi (folder / multi-file) ------------------
+# ------------------ /analyze-multi (multi-file) ------------------
 
 
-def test_analyze_multi_two_files(client: TestClient) -> None:
+def test_analyze_multi_two_files(
+        client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """
     Upload two small files via /analyze-multi and ensure they are
-    aggregated and sent through the dev stub LLM.
+    aggregated and sent through the (mocked) LLM.
     """
+
+    async def fake_call_llm(_prompt: str) -> str:
+        return "FAKE_ANALYSIS_MULTI"
+
+    monkeypatch.setattr(helpers, "call_llm", fake_call_llm)
+
     code1 = b"def a():\n    return 1\n"
     code2 = b"class B:\n    pass\n"
 
@@ -104,4 +122,6 @@ def test_analyze_multi_two_files(client: TestClient) -> None:
     assert data["total_parts"] >= 2
     assert "python" in data["languages"]
     assert len(data["file_summaries"]) == 2
-    assert "DEV STUB ANALYSIS (no real LLM call)" in data["analysis"]
+
+    # Make sure our fake was used
+    assert "FAKE_ANALYSIS_MULTI" in data["analysis"]
