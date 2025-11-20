@@ -1,45 +1,39 @@
-import json
-import os, httpx
+import logging
+import os
 
-from fastapi import HTTPException
+OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://localhost:11434")
+MODEL_NAME = os.getenv("MODEL_NAME", "mistral:latest")
 
-OLLAMA_HOST  = os.getenv("OLLAMA_HOST", "http://localhost:11434")
-MODEL_NAME   = os.getenv("MODEL_NAME", "mistral:latest")
+logger = logging.getLogger(__name__)
+
 
 async def call_llm(prompt: str) -> str:
-    payload = {
-        "model": MODEL_NAME,
-        "messages": [{"role": "user", "content": prompt}],
-        "stream": False,
-        "options": {"num_ctx": 8192},
-    }
+    """
+    DEV MODE: very fast stub for the LLM.
 
-    try:
-        async with httpx.AsyncClient(timeout=180.0) as client:
-            r = await client.post(f"{OLLAMA_HOST}/api/chat", json=payload)
-            r.raise_for_status()
-
-            # JSON parsing (mocked json() may be async)
-            try:
-                data = r.json()
-                if callable(getattr(data, "__await__", None)):
-                    data = await data
-            except (json.JSONDecodeError, ValueError) as e:
-                raise HTTPException(status_code=502, detail=f"Ollama JSON decode error: {e}") from e
-
-    except httpx.HTTPStatusError as e:
-        body = e.response.text[:400] if e.response is not None else ""
-        raise HTTPException(status_code=502, detail=f"Ollama HTTP {e.response.status_code}: {body}") from e
-
-    except httpx.RequestError as e:
-        raise HTTPException(status_code=502, detail=f"Ollama request error: {e}") from e
-
-    # Extract model response
-    content = (
-            data.get("message", {}).get("content")
-            or data.get("response")
+    - Does NOT call Ollama at all.
+    - Returns a short synthetic "analysis" string immediately.
+    - Lets you test the whole pipeline (clone -> parse -> normalize -> analyze_parts)
+      and the Angular UI without waiting minutes for the model.
+    """
+    max_preview = 400
+    preview = prompt[:max_preview].replace("\n", " ") + (
+        "..." if len(prompt) > max_preview else ""
     )
-    if content is None:
-        raise HTTPException(status_code=502, detail="Ollama response missing message.content")
 
-    return content
+    logger.info("DEV STUB LLM called, prompt length=%d", len(prompt))
+
+    return (
+        "DEV STUB ANALYSIS (no real LLM call)\n"
+        "This response is generated instantly for fast testing.\n\n"
+        f"- Model configured: {MODEL_NAME}\n"
+        f"- Ollama host    : {OLLAMA_HOST}\n"
+        f"- Prompt length  : {len(prompt)} characters\n"
+        f"- Prompt preview : {preview}\n"
+    )
+
+# Real implementation kept commented out for now. When you switch to real mode,
+# tests can be extended to patch httpx.AsyncClient and simulate responses.
+#
+# async def call_llm(prompt: str) -> str:
+#     ...

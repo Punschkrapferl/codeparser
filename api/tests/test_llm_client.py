@@ -1,109 +1,48 @@
 import pytest
-from unittest.mock import patch, AsyncMock, MagicMock
-from fastapi import HTTPException
-from typing import cast
-from httpx import Request, Response, HTTPStatusError, RequestError
 
-from api.llm_client import call_llm
-
-@pytest.mark.asyncio
-async def test_call_llm_success_async_json():
-    prompt = "Hello LLM"
-
-    with patch("api.llm_client.httpx.AsyncClient") as mock_client_cls:
-        mock_client = AsyncMock()
-        mock_client_cls.return_value.__aenter__.return_value = mock_client
-
-        # async .json() mock
-        async def async_json():
-            return {"message": {"content": "response text"}}
-
-        mock_response = AsyncMock()
-        mock_response.json = AsyncMock(side_effect=async_json)
-        mock_response.raise_for_status = MagicMock(return_value=None)
-        mock_client.post.return_value = mock_response
-
-        result = await call_llm(prompt)
-        assert result == "response text"
+from api import llm_client
 
 
 @pytest.mark.asyncio
-async def test_call_llm_http_status_error():
-    prompt = "Hello"
+async def test_call_llm_dev_stub_basic() -> None:
+    prompt = "Hello test prompt"
 
-    with patch("api.llm_client.httpx.AsyncClient") as mock_client_cls:
-        mock_client = AsyncMock()
-        mock_client_cls.return_value.__aenter__.return_value = mock_client
+    result = await llm_client.call_llm(prompt)
 
-        dummy_request = Request("POST", "http://localhost:11434/api/chat")
-        dummy_response = Response(502, request=dummy_request, text="Bad Gateway")
+    # Basic type/length checks
+    assert isinstance(result, str)
+    assert len(result) > 0
 
-        mock_client.post.side_effect = HTTPStatusError(
-            "HTTP error", request=dummy_request, response=dummy_response
-        )
+    # It should clearly be the DEV stub
+    assert "DEV STUB ANALYSIS (no real LLM call)" in result
+    assert "This response is generated instantly for fast testing." in result
 
-        with pytest.raises(HTTPException) as exc:
-            await call_llm(prompt)
+    # It should echo configuration from the module
+    assert f"Model configured: {llm_client.MODEL_NAME}" in result
+    assert f"Ollama host    : {llm_client.OLLAMA_HOST}" in result
 
-        http_exc = cast(HTTPException, exc.value)
-        assert http_exc.status_code == 502
-        assert "Ollama HTTP" in getattr(http_exc, "detail", "")
-        assert "Bad Gateway" in getattr(http_exc, "detail", "")
+    # It should mention prompt length
+    assert f"Prompt length  : {len(prompt)} characters" in result
 
-@pytest.mark.asyncio
-async def test_call_llm_request_error():
-    prompt = "Hello"
+    # It should include a preview of the prompt
+    assert "Prompt preview :" in result
+    assert "Hello test prompt" in result
 
-    with patch("api.llm_client.httpx.AsyncClient") as mock_client_cls:
-        mock_client = AsyncMock()
-        mock_client_cls.return_value.__aenter__.return_value = mock_client
-
-        dummy_request = Request("POST", "http://localhost:11434/api/chat")
-        mock_client.post.side_effect = RequestError("Request failed", request=dummy_request)
-
-        with pytest.raises(HTTPException) as exc:
-            await call_llm(prompt)
-
-        http_exc = cast(HTTPException, exc.value)
-        assert http_exc.status_code == 502
-        assert "Ollama request error" in getattr(http_exc, "detail", "")
 
 @pytest.mark.asyncio
-async def test_call_llm_json_decode_error():
-    prompt = "Hello"
+async def test_call_llm_dev_stub_truncates_preview() -> None:
+    # Build a long prompt to ensure truncation logic is exercised
+    long_prompt = "X" * 500  # > 400
 
-    with patch("api.llm_client.httpx.AsyncClient") as mock_client_cls:
-        mock_client = AsyncMock()
-        mock_client_cls.return_value.__aenter__.return_value = mock_client
+    result = await llm_client.call_llm(long_prompt)
 
-        mock_response = AsyncMock()
-        mock_response.raise_for_status = MagicMock(return_value=None)
-        mock_response.json.side_effect = ValueError("Invalid JSON")
-        mock_client.post.return_value = mock_response
+    # Preview should end with "..." when truncated
+    assert "Prompt preview :" in result
+    # Extract the preview line
+    lines = [line for line in result.splitlines() if line.startswith("- Prompt preview")]
+    assert len(lines) == 1
+    preview_line = lines[0]
 
-        with pytest.raises(HTTPException) as exc:
-            await call_llm(prompt)
-
-        http_exc = cast(HTTPException, exc.value)
-        assert http_exc.status_code == 502
-        assert "Ollama JSON decode error" in getattr(http_exc, "detail", "")
-
-@pytest.mark.asyncio
-async def test_call_llm_missing_content():
-    prompt = "Hello"
-
-    with patch("api.llm_client.httpx.AsyncClient") as mock_client_cls:
-        mock_client = AsyncMock()
-        mock_client_cls.return_value.__aenter__.return_value = mock_client
-
-        mock_response = AsyncMock()
-        mock_response.raise_for_status = MagicMock(return_value=None)
-        mock_response.json.return_value = {"message": {}}
-        mock_client.post.return_value = mock_response
-
-        with pytest.raises(HTTPException) as exc:
-            await call_llm(prompt)
-
-        http_exc = cast(HTTPException, exc.value)
-        assert http_exc.status_code == 502
-        assert "Ollama response missing message.content" in getattr(http_exc, "detail", "")
+    # The preview should be shorter than the full prompt and end with "..."
+    assert len(preview_line) < len(long_prompt) + 40  # some margin
+    assert preview_line.rstrip().endswith("...")

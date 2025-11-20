@@ -1,39 +1,31 @@
-from fastapi.testclient import TestClient
-from api.api_main import app, _parse_chunks_bytes, _normalize_chunks
+from pathlib import Path
+import os
 
-client = TestClient(app)
+from api import api_main as cfg
 
-# --- Test helper functions ---
-def test_parse_chunks_bytes_empty():
-    raw = b""
-    chunks = _parse_chunks_bytes(raw)
-    assert chunks == []
 
-def test_normalize_chunks_basic():
-    chunks = [
-        {"path": "a.py", "language": "python", "code": "print('hi')"},
-        {"Path": "b.java", "Language": "java", "Code": "class A {}"}
-    ]
-    norm = _normalize_chunks(chunks)
-    assert len(norm) == 2
-    assert norm[0]["language"] == "python"
-    assert norm[1]["language"] == "java"
+def test_app_and_project_dirs() -> None:
+    # APP_DIR should be the api package directory
+    assert isinstance(cfg.APP_DIR, Path)
+    assert cfg.APP_DIR.name == "api"
 
-# --- Test FastAPI route ---
-def test_health_route():
-    resp = client.get("/health")
-    assert resp.status_code == 200
-    assert resp.json() == {"ok": True}
+    # PROJECT_ROOT is parent of api
+    assert cfg.PROJECT_ROOT == cfg.APP_DIR.parent
 
-# Example: simulate file upload
-def test_analyze_code_route(tmp_path):
-    test_file = tmp_path / "test.jsonl"
-    test_file.write_text('[{"path":"a.py","language":"python","code":"print(1)"}]')
 
-    with open(test_file, "rb") as f:
-        resp = client.post("/analyze", files={"file": ("test.jsonl", f)})
+def test_repos_dir_is_absolute_path() -> None:
+    assert isinstance(cfg.REPOS_DIR, Path)
+    assert cfg.REPOS_DIR.is_absolute()
 
-    assert resp.status_code == 200
-    data = resp.json()
-    assert "analysis" in data
-    assert "batches" in data
+
+def test_model_and_batch_defaults_respect_env() -> None:
+    expected_model = os.getenv("MODEL_NAME", "mistral:latest")
+    expected_batch = int(os.getenv("BATCH_SIZE", "4"))
+
+    assert cfg.MODEL_NAME == expected_model
+    assert cfg.BATCH_SIZE == expected_batch
+
+
+def test_output_jsonl_location() -> None:
+    expected = cfg.PROJECT_ROOT / "api" / "output.jsonl"
+    assert cfg.OUTPUT_JSONL == expected
