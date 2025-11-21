@@ -57,7 +57,7 @@ export class AppComponent implements OnInit {
   constructor(
     private api: ApiService,
     private fb: FormBuilder,
-  ) {}
+  ) { }
 
   ngOnInit(): void {
     this.api.health().subscribe(ok => (this.healthOk = ok));
@@ -74,6 +74,12 @@ export class AppComponent implements OnInit {
 
   get systemHint() {
     return this.form.get('systemHint');
+  }
+
+  /** Simple pluralization helper used in the template. */
+  plural(count: number | null | undefined, singular: string, plural: string): string {
+    const n = count ?? 0;
+    return n === 1 ? singular : plural;
   }
 
   // ---------- GitHub analyzer ----------

@@ -1,8 +1,3 @@
-<!-- Concepts:
-{{ title }} = interpolation, prints the title from AppComponent.
-*ngIf = conditionally renders parts of the template.
-[ngClass] = adds classes dynamically based on expressions. -->
-
 <div class="app-container">
   <header class="app-header">
     <h1>{{ title }}</h1>
@@ -11,10 +6,7 @@
     </p>
 
     <div class="health-indicator" *ngIf="healthOk !== null">
-      <span
-        class="dot"
-        [ngClass]="{ ok: healthOk === true, fail: healthOk === false }"
-      ></span>
+      <span class="dot" [ngClass]="{ ok: healthOk === true, fail: healthOk === false }"></span>
 
       <span *ngIf="healthOk === true">Backend: healthy</span>
       <span *ngIf="healthOk === false">Backend: unreachable</span>
@@ -30,12 +22,7 @@
       <form [formGroup]="form" (ngSubmit)="onSubmit()">
         <div class="form-group">
           <label for="repoUrl">Repository URL</label>
-          <input
-            id="repoUrl"
-            type="url"
-            formControlName="repoUrl"
-            placeholder="https://github.com/user/repo.git"
-          />
+          <input id="repoUrl" type="url" formControlName="repoUrl" placeholder="https://github.com/user/repo.git" />
           <div class="error" *ngIf="repoUrl?.invalid && repoUrl?.touched">
             Please enter a valid repository URL (min. 5 characters).
           </div>
@@ -43,12 +30,8 @@
 
         <div class="form-group">
           <label for="systemHint">System hint (optional)</label>
-          <textarea
-            id="systemHint"
-            rows="3"
-            formControlName="systemHint"
-            placeholder="Explain how you want the code to be reviewed..."
-          ></textarea>
+          <textarea id="systemHint" rows="3" formControlName="systemHint"
+            placeholder="Explain how you want the code to be reviewed..."></textarea>
         </div>
 
         <div class="actions-row actions-row-inline">
@@ -57,11 +40,7 @@
             <span *ngIf="isLoading">Analysing…</span>
           </button>
 
-          <button
-            type="button"
-            class="secondary"
-            (click)="resetGithubAnalyzer()"
-          >
+          <button type="button" class="secondary" (click)="resetGithubAnalyzer()">
             Reset
           </button>
         </div>
@@ -84,10 +63,7 @@
           </p>
         </div>
 
-        <app-result-viewer
-          [title]="'GitHub repo analysis'"
-          [analysis]="lastResult.analysis"
-        ></app-result-viewer>
+        <app-result-viewer [title]="'GitHub repo analysis'" [analysis]="lastResult.analysis"></app-result-viewer>
       </section>
     </section>
 
@@ -108,35 +84,16 @@
 
         <!-- Visually hidden labels, but associated to inputs -->
         <label for="fileInput" class="sr-only">Select one or more files</label>
-        <input
-          id="fileInput"
-          #fileInput
-          type="file"
-          class="hidden-file-input"
-          multiple
-          (change)="onFileSelected($event)"
-        />
+        <input id="fileInput" #fileInput type="file" class="hidden-file-input" multiple
+          (change)="onFileSelected($event)" />
 
         <label for="folderInput" class="sr-only">Select a folder to analyse</label>
-        <input
-          id="folderInput"
-          #folderInput
-          type="file"
-          class="hidden-file-input"
-          webkitdirectory
-          directory
-          multiple
-          (change)="onFolderSelected($event)"
-        />
+        <input id="folderInput" #folderInput type="file" class="hidden-file-input" webkitdirectory directory multiple
+          (change)="onFolderSelected($event)" />
       </div>
 
-      <div
-        class="drop-zone"
-        [class.drag-over]="isDragActive"
-        (dragover)="onFileDragOver($event)"
-        (dragleave)="onFileDragLeave($event)"
-        (drop)="onFileDrop($event)"
-      >
+      <div class="drop-zone" [class.drag-over]="isDragActive" (dragover)="onFileDragOver($event)"
+        (dragleave)="onFileDragLeave($event)" (drop)="onFileDrop($event)">
         <p>Drag &amp; drop files or a folder here.</p>
         <p class="hint">Code, JSONL, or plain-text files work best.</p>
       </div>
@@ -157,20 +114,12 @@
       </div>
 
       <div class="actions-row actions-row-inline">
-        <button
-          type="button"
-          [disabled]="isFileLoading || !healthOk || !hasFilesSelected"
-          (click)="onAnalyzeFiles()"
-        >
+        <button type="button" [disabled]="isFileLoading || !healthOk || !hasFilesSelected" (click)="onAnalyzeFiles()">
           <span *ngIf="!isFileLoading">Start file / folder analysis</span>
           <span *ngIf="isFileLoading">Analysing files…</span>
         </button>
 
-        <button
-          type="button"
-          class="secondary"
-          (click)="resetFileAnalyzer()"
-        >
+        <button type="button" class="secondary" (click)="resetFileAnalyzer()">
           Reset
         </button>
       </div>
@@ -199,30 +148,22 @@
           </p>
         </div>
 
-        <div
-          class="file-summary-toggle"
-          *ngIf="fileResult.file_summaries?.length"
-        >
+        <div class="file-summary-toggle" *ngIf="fileResult.file_summaries?.length">
           <label>
-            <input
-              type="checkbox"
-              [checked]="showFileSummaries"
-              (change)="showFileSummaries = !showFileSummaries"
-            />
+            <input type="checkbox" [checked]="showFileSummaries" (change)="showFileSummaries = !showFileSummaries" />
             Show per-file summary ({{ fileResult.file_summaries?.length ?? 0 }})
           </label>
 
           <ul *ngIf="showFileSummaries">
             <li *ngFor="let f of fileResult.file_summaries">
-              <code>{{ f.filename }}</code> – {{ f.num_parts }} parts
+              <code>{{ f.filename }}</code>
+              <span *ngIf="f.num_parts > 1"> – {{ f.num_parts }} parts</span>
             </li>
           </ul>
+
         </div>
 
-        <app-result-viewer
-          [title]="'File / folder analysis'"
-          [analysis]="fileResult.analysis"
-        ></app-result-viewer>
+        <app-result-viewer [title]="'File / folder analysis'" [analysis]="fileResult.analysis"></app-result-viewer>
       </section>
     </section>
   </main>

@@ -4,34 +4,42 @@ import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 @Pipe({
   name: 'highlight',
   standalone: true,
+  pure: true,
 })
 export class HighlightPipe implements PipeTransform {
-  constructor(private sanitizer: DomSanitizer) {}
+  constructor(private sanitizer: DomSanitizer) { }
 
-  transform(text: string | null | undefined, search: string | null | undefined): SafeHtml {
+  private escapeHtml(text: string): string {
+    return text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  transform(
+    text: string | null | undefined,
+    search: string | null | undefined,
+  ): SafeHtml {
     if (!text) {
       return '';
     }
-
-    let result = text;
-
-    // Very lightweight "syntax highlighting" for some common code-ish keywords
-    const keywordPattern = /\b(def|class|function|if|else|for|while|return|async|await|try|catch)\b/g;
-    result = result.replace(
-      keywordPattern,
-      '<span class="kw">$1</span>',
-    );
-
-    // Search term highlighting
-    if (search && search.trim().length > 0) {
-      const escaped = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const searchRegex = new RegExp(escaped, 'gi');
-      result = result.replace(
-        searchRegex,
-        match => `<mark>${match}</mark>`,
-      );
+    if (!search || !search.trim()) {
+      // Should only be used when searchTerm is set,
+      // but keep this as a safe default.
+      return this.sanitizer.bypassSecurityTrustHtml(this.escapeHtml(text));
     }
 
-    return this.sanitizer.bypassSecurityTrustHtml(result);
+    const escapedText = this.escapeHtml(text);
+    const escapedSearch = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(escapedSearch, 'gi');
+
+    const highlighted = escapedText.replace(
+      regex,
+      match => `<mark>${match}</mark>`,
+    );
+
+    return this.sanitizer.bypassSecurityTrustHtml(highlighted);
   }
 }

@@ -3,50 +3,32 @@
     <h3 class="title">{{ title }}</h3>
 
     <div class="toolbar-actions">
-      <mat-form-field
-        appearance="outline"
-        class="search-field"
-        floatLabel="auto"
-      >
-        <mat-label>Search in analysis</mat-label>
-        <input
-          matInput
-          type="search"
-          [(ngModel)]="searchTerm"
-          placeholder="Enter keyword…"
-          autocomplete="off"
-        />
+      <div class="search-field">
+        <input id="analysisSearch" class="search-input" type="search" [(ngModel)]="searchTerm"
+          placeholder="Search in analysis" autocomplete="off" />
 
-        <!-- Clear search button -->
-        <button
-          *ngIf="searchTerm"
-          matSuffix
-          mat-icon-button
-          type="button"
-          (click)="searchTerm = ''"
-          aria-label="Clear search"
-        >
-          <mat-icon>close</mat-icon>
+        <button *ngIf="searchTerm" type="button" class="icon-button clear-button" (click)="searchTerm = ''"
+          aria-label="Clear search">
+          ✕
         </button>
-      </mat-form-field>
+      </div>
 
-      <!-- Download as .txt -->
-      <button
-        mat-icon-button
-        type="button"
-        (click)="downloadTxt()"
-        [disabled]="!analysis"
-        aria-label="Download analysis as text file"
-      >
-        <mat-icon>download</mat-icon>
+      <button type="button" class="icon-button download-button" (click)="downloadTxt()" [disabled]="!analysis"
+        aria-label="Download analysis as text file">
+        ⬇
       </button>
     </div>
   </div>
 
-  <pre
-    class="analysis-pre"
-    [innerHTML]="analysis | highlight: searchTerm"
-  ></pre>
+  <!-- WHEN there is a search term: use highlight pipe -->
+  <pre *ngIf="searchTerm; else plainAnalysis" class="analysis-pre" [innerHTML]="analysis | highlight: searchTerm"></pre>
+
+  <!-- WHEN searchTerm is empty: show raw text, no highlight at all -->
+  <ng-template #plainAnalysis>
+    <pre class="analysis-pre">
+{{ analysis }}
+    </pre>
+  </ng-template>
 </div>
 
 <ng-template #emptyState>
