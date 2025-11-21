@@ -1,0 +1,59 @@
+<div class="result-viewer" *ngIf="analysis?.trim(); else emptyState">
+  <div class="toolbar">
+    <h3 class="title">{{ title }}</h3>
+
+    <div class="toolbar-actions">
+      <mat-form-field
+        appearance="outline"
+        class="search-field"
+        floatLabel="auto"
+      >
+        <mat-label>Search in analysis</mat-label>
+        <input
+          matInput
+          type="search"
+          [(ngModel)]="searchTerm"
+          placeholder="Enter keyword…"
+          autocomplete="off"
+        />
+
+        <!-- Clear search button -->
+        <button
+          *ngIf="searchTerm"
+          matSuffix
+          mat-icon-button
+          type="button"
+          (click)="searchTerm = ''"
+          aria-label="Clear search"
+        >
+          <mat-icon>close</mat-icon>
+        </button>
+      </mat-form-field>
+
+      <!-- Download as .txt -->
+      <button
+        mat-icon-button
+        type="button"
+        (click)="downloadTxt()"
+        [disabled]="!analysis"
+        aria-label="Download analysis as text file"
+      >
+        <mat-icon>download</mat-icon>
+      </button>
+    </div>
+  </div>
+
+  <pre
+    class="analysis-pre"
+    [innerHTML]="analysis | highlight: searchTerm"
+  ></pre>
+</div>
+
+<ng-template #emptyState>
+  <div class="result-empty">
+    <p class="empty-title">{{ title }}</p>
+    <p class="empty-subtitle">
+      No analysis available yet. Run an analysis to see results here.
+    </p>
+  </div>
+</ng-template>

@@ -1,0 +1,111 @@
+:host {
+  display: block;
+  margin-top: 1rem;
+}
+
+.result-viewer {
+  border-radius: 0.75rem;
+  background: #020617;
+  border: 1px solid #1f2937;
+  padding: 1rem 1.25rem;
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.8);
+}
+
+/* Top bar: title + search + download */
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.title {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0;
+  color: #e5e7eb;
+}
+
+.toolbar-actions {
+  flex: 1 1 260px;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Material search field inside toolbar */
+.search-field {
+  flex: 1 1 auto;
+  min-width: 180px;
+}
+
+/* Optional fine-tuning for mat-form-field in dark mode */
+::ng-deep .search-field .mdc-text-field {
+  background: #020617;
+}
+
+/* Icon button styling (keeps Angular Material behaviour) */
+.toolbar-actions button[mat-icon-button] {
+  background: #111827;
+  border-radius: 999px;
+  color: #e5e7eb;
+  transition: opacity 0.15s, transform 0.1s;
+
+  &:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+  }
+
+  &[disabled] {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+  }
+}
+
+/* Main analysis text */
+.analysis-pre {
+  background: #020617;
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  max-height: 420px;
+  overflow: auto;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    'Liberation Mono', 'Courier New', monospace;
+  color: #e5e7eb;
+}
+
+/* Highlight spans produced by the highlight pipe */
+.highlight-hit {
+  background: rgba(56, 189, 248, 0.15);
+  border-radius: 0.2rem;
+  padding: 0 0.1rem;
+  box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.4);
+}
+
+/* Empty state when no analysis is present */
+.result-empty {
+  border-radius: 0.75rem;
+  border: 1px dashed #4b5563;
+  padding: 1rem;
+  text-align: center;
+  font-size: 0.85rem;
+  color: #9ca3af;
+  background: rgba(15, 23, 42, 0.6);
+}
+
+/* Small-screen tweaks */
+@media (max-width: 640px) {
+  .toolbar {
+    align-items: flex-start;
+  }
+
+  .toolbar-actions {
+    justify-content: flex-start;
+  }
+}

@@ -3,7 +3,6 @@
 // standalone: true means it doesn’t need an NgModule.
 // imports lists other Angular features this component uses:
 // CommonModule gives you *ngIf, *ngFor, etc.
-// RouterOutlet renders the current route (here just the root).
 
 import {
   Component,
@@ -18,16 +17,20 @@ import {
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
+
 import {
   ApiService,
   GithubAnalyzeResponse,
   FileAnalyzeResponse,
 } from './services/api.service';
 
+// NEW: Result viewer component
+import { ResultViewerComponent } from './result-viewer/result-viewer.component';
+
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, ResultViewerComponent],
   templateUrl: './app.html',
   styleUrl: './app.scss',
 })

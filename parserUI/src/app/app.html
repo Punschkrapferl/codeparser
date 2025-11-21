@@ -71,6 +71,7 @@
         </div>
       </form>
 
+      <!-- META + RESULT VIEWER FOR GITHUB -->
       <section class="analysis" *ngIf="lastResult">
         <div class="meta">
           <p><strong>Repo path:</strong> {{ lastResult.repo_path }}</p>
@@ -83,10 +84,10 @@
           </p>
         </div>
 
-        <h3>Analysis</h3>
-        <pre class="analysis-pre">
-{{ lastResult.analysis }}</pre
-        >
+        <app-result-viewer
+          [title]="'GitHub repo analysis'"
+          [analysis]="lastResult.analysis"
+        ></app-result-viewer>
       </section>
     </section>
 
@@ -183,6 +184,7 @@
         <span>Calling backend and LLM…</span>
       </div>
 
+      <!-- META + RESULT VIEWER FOR FILES -->
       <section class="analysis" *ngIf="fileResult">
         <div class="meta">
           <p><strong>Batches:</strong> {{ fileResult.batches }}</p>
@@ -217,10 +219,10 @@
           </ul>
         </div>
 
-        <h3>Analysis</h3>
-        <pre class="analysis-pre">
-{{ fileResult.analysis }}</pre
-        >
+        <app-result-viewer
+          [title]="'File / folder analysis'"
+          [analysis]="fileResult.analysis"
+        ></app-result-viewer>
       </section>
     </section>
   </main>

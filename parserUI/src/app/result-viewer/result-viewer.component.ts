@@ -1,0 +1,75 @@
+import { Component, Input } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+
+// Angular Material
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatIconModule } from '@angular/material/icon';
+import { MatButtonModule } from '@angular/material/button';
+
+import { HighlightPipe } from '../../highlight.pipe';
+
+@Component({
+  selector: 'app-result-viewer',
+  standalone: true,
+  imports: [
+    CommonModule,
+    FormsModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatIconModule,
+    MatButtonModule,
+    HighlightPipe,
+  ],
+  templateUrl: './result-viewer.component.html',
+  styleUrl: './result-viewer.component.scss',
+})
+export class ResultViewerComponent {
+  /**
+   * Small title shown in the toolbar of the result viewer.
+   * Example: "GitHub repo analysis" or "File / folder analysis".
+   */
+  @Input() title = 'Analysis';
+
+  /**
+   * Raw analysis text coming from the backend.
+   * It is displayed as preformatted text and passed through the HighlightPipe.
+   */
+  @Input() analysis: string | null = null;
+
+  /**
+   * Current search term used by the HighlightPipe to highlight matches.
+   */
+  searchTerm = '';
+
+  /**
+   * Download the current analysis as a .txt file.
+   */
+  downloadTxt(): void {
+    if (!this.analysis || !this.analysis.trim()) {
+      return;
+    }
+
+    // Generate a simple, safe filename based on the title
+    const fileNameBase =
+      this.title
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '') || 'analysis';
+
+    const blob = new Blob([this.analysis], {
+      type: 'text/plain;charset=utf-8',
+    });
+
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${fileNameBase}.txt`;
+
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }
+}
