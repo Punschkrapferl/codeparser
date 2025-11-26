@@ -2,6 +2,8 @@ from pathlib import Path
 import os
 
 from api import api_main as cfg
+from api import llm_client
+from api import helpers as helpers_mod
 
 
 def test_app_and_project_dirs() -> None:
@@ -18,14 +20,16 @@ def test_repos_dir_is_absolute_path() -> None:
     assert cfg.REPOS_DIR.is_absolute()
 
 
-def test_model_and_batch_defaults_respect_env() -> None:
-    expected_model = os.getenv("MODEL_NAME", "mistral:latest")
-    expected_batch = int(os.getenv("BATCH_SIZE", "4"))
-
-    assert cfg.MODEL_NAME == expected_model
-    assert cfg.BATCH_SIZE == expected_batch
-
-
 def test_output_jsonl_location() -> None:
     expected = cfg.PROJECT_ROOT / "api" / "output.jsonl"
     assert cfg.OUTPUT_JSONL == expected
+
+
+def test_model_default_respects_env() -> None:
+    expected_model = os.getenv("MODEL_NAME", "mistral:latest")
+    assert llm_client.MODEL_NAME == expected_model
+
+
+def test_batch_size_default_respects_env() -> None:
+    expected_batch = int(os.getenv("BATCH_SIZE", "4"))
+    assert helpers_mod.BATCH_SIZE == expected_batch

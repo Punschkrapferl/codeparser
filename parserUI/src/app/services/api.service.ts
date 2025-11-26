@@ -4,7 +4,7 @@ import { Observable, map } from 'rxjs';
 
 export type JobUiStatus =
   | 'idle'
-  | 'pending'   // ← add this
+  | 'pending'
   | 'queued'
   | 'running'
   | 'done'
@@ -14,6 +14,8 @@ export type JobUiStatus =
 export interface HealthResponse {
   ok: boolean;
 }
+
+/* ---------- GitHub job types ---------- */
 
 export interface GithubAnalyzeRequest {
   repo_url: string;
@@ -42,8 +44,7 @@ export interface GithubAnalyzeResponse {
   source_file?: string;
 }
 
-// alias for job-polling.service.ts
-export type JobStatusResponse = GithubAnalyzeJobStatusResponse;
+/* ---------- File analysis types ---------- */
 
 export interface FileSummary {
   filename: string;
@@ -60,43 +61,56 @@ export interface FileAnalyzeResponse {
   file_summaries?: FileSummary[];
 }
 
+export interface FileAnalyzeJobStartResponse {
+  job_id: string;
+}
+
+export interface FileAnalyzeJobStatusResponse {
+  job_id: string;
+  status: JobUiStatus;
+  result?: FileAnalyzeResponse | null;
+  error?: string | null;
+}
+
+/* ---------- Generic job status alias ---------- */
+
+export type JobStatusResponse =
+  | GithubAnalyzeJobStatusResponse
+  | FileAnalyzeJobStatusResponse;
+
 @Injectable({ providedIn: 'root' })
 export class ApiService {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = 'http://localhost:8000';
 
-  // used by AppComponent
+  /* ---------- Health ---------- */
+
   healthCheck(): Observable<void> {
     return this.http
       .get<HealthResponse>(`${this.baseUrl}/health`)
       .pipe(map(() => void 0));
   }
 
-  // ---------- GitHub job endpoints ----------
+  /* ---------- GitHub job endpoints ---------- */
 
   startGithubJob(
-    payload: GithubAnalyzeRequest
+    payload: GithubAnalyzeRequest,
   ): Observable<GithubAnalyzeJobStartResponse> {
     return this.http.post<GithubAnalyzeJobStartResponse>(
       `${this.baseUrl}/analyze-github-job`,
-      payload
+      payload,
     );
   }
 
-  getGithubJobStatus(
-    jobId: string
-  ): Observable<GithubAnalyzeJobStatusResponse> {
+  getGithubJobStatus(jobId: string): Observable<GithubAnalyzeJobStatusResponse> {
     return this.http.get<GithubAnalyzeJobStatusResponse>(
-      `${this.baseUrl}/analyze-github-job/${jobId}`
+      `${this.baseUrl}/analyze-github-job/${jobId}`,
     );
   }
 
-  /**
-   * Wrapper methods so existing components don't need to change names.
-   */
   startGithubRepoAnalysisJob(
     repoUrl: string,
-    systemHint?: string | null
+    systemHint?: string | null,
   ): Observable<GithubAnalyzeJobStartResponse> {
     const payload: GithubAnalyzeRequest = { repo_url: repoUrl };
     if (systemHint && systemHint.trim().length > 0) {
@@ -106,23 +120,21 @@ export class ApiService {
   }
 
   getGithubRepoJobStatus(
-    jobId: string
+    jobId: string,
   ): Observable<GithubAnalyzeJobStatusResponse> {
     return this.getGithubJobStatus(jobId);
   }
 
-  /**
-   * Generic job status getter for JobPollingService.
-   */
+  /* This generic method is only used by JobPollingService (if you decide to use it). */
   getJobStatus(jobId: string): Observable<JobStatusResponse> {
     return this.getGithubJobStatus(jobId);
   }
 
-  // ---------- File analysis endpoints ----------
+  /* ---------- File analysis (one-shot) ---------- */
 
   analyzeSingleFile(
     file: File,
-    systemHint: string | null
+    systemHint: string | null,
   ): Observable<FileAnalyzeResponse> {
     const form = new FormData();
     form.append('file', file);
@@ -131,13 +143,13 @@ export class ApiService {
     }
     return this.http.post<FileAnalyzeResponse>(
       `${this.baseUrl}/analyze`,
-      form
+      form,
     );
   }
 
   analyzeMultipleFiles(
     files: File[],
-    systemHint: string | null
+    systemHint: string | null,
   ): Observable<FileAnalyzeResponse> {
     const form = new FormData();
     for (const f of files) {
@@ -148,23 +160,43 @@ export class ApiService {
     }
     return this.http.post<FileAnalyzeResponse>(
       `${this.baseUrl}/analyze-multi`,
-      form
+      form,
     );
   }
 
-  /**
-   * Wrapper used by FileAnalyzerComponent (expects FormData + hint).
-   */
   analyzeFiles(
     formData: FormData,
-    systemHint: string | null
+    systemHint: string | null,
   ): Observable<FileAnalyzeResponse> {
     if (systemHint && systemHint.trim().length > 0) {
       formData.append('system_hint', systemHint);
     }
     return this.http.post<FileAnalyzeResponse>(
       `${this.baseUrl}/analyze-multi`,
-      formData
+      formData,
+    );
+  }
+
+  /* ---------- File analysis job endpoints (for polling) ---------- */
+
+  startFileAnalysisJob(
+    formData: FormData,
+    systemHint: string | null,
+  ): Observable<FileAnalyzeJobStartResponse> {
+    if (systemHint && systemHint.trim().length > 0) {
+      formData.append('system_hint', systemHint);
+    }
+    return this.http.post<FileAnalyzeJobStartResponse>(
+      `${this.baseUrl}/analyze-multi-job`,
+      formData,
+    );
+  }
+
+  getFileAnalysisJobStatus(
+    jobId: string,
+  ): Observable<FileAnalyzeJobStatusResponse> {
+    return this.http.get<FileAnalyzeJobStatusResponse>(
+      `${this.baseUrl}/analyze-multi-job/${jobId}`,
     );
   }
 }

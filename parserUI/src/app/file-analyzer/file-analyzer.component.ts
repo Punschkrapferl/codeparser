@@ -8,13 +8,17 @@ import {
     ElementRef,
     Input,
     ViewChild,
+    OnDestroy,
     inject,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { Subscription, interval, switchMap } from 'rxjs';
 
 import {
     ApiService,
     FileAnalyzeResponse,
+    FileAnalyzeJobStatusResponse,
+    JobUiStatus,
 } from '../services/api.service';
 import { ResultViewerComponent } from '../result-viewer/result-viewer.component';
 
@@ -31,7 +35,7 @@ import { ResultViewerComponent } from '../result-viewer/result-viewer.component'
     templateUrl: './file-analyzer.component.html',
     styleUrl: './file-analyzer.component.scss',
 })
-export class FileAnalyzerComponent {
+export class FileAnalyzerComponent implements OnDestroy {
     @Input() healthOk: boolean | null = null;
 
     selectedFiles: File[] = [];
@@ -42,10 +46,20 @@ export class FileAnalyzerComponent {
     showFileSummaries = false;
     fileSystemHint = '';
 
+    // Job/polling state (mirrors GitHub analyser)
+    jobId: string | null = null;
+    jobStatus: JobUiStatus = 'idle';
+    pollingMessage: string | null = null;
+    private pollingSub: Subscription | null = null;
+
     @ViewChild('fileInput') fileInput?: ElementRef<HTMLInputElement>;
     @ViewChild('folderInput') folderInput?: ElementRef<HTMLInputElement>;
 
     private api = inject(ApiService);
+
+    ngOnDestroy(): void {
+        this.stopPolling();
+    }
 
     onClickFileInput(): void {
         this.fileInput?.nativeElement.click();
@@ -114,6 +128,11 @@ export class FileAnalyzerComponent {
         this.showFileSummaries = false;
         this.fileSystemHint = '';
 
+        this.jobId = null;
+        this.jobStatus = 'idle';
+        this.pollingMessage = null;
+        this.stopPolling();
+
         if (this.fileInput?.nativeElement) {
             this.fileInput.nativeElement.value = '';
         }
@@ -143,17 +162,108 @@ export class FileAnalyzerComponent {
         this.fileError = null;
         this.fileResult = null;
 
-        this.api.analyzeFiles(formData, systemHintValue).subscribe({
-            next: (res: FileAnalyzeResponse) => {
-                this.isFileLoading = false;
-                this.fileResult = res;
+        this.jobId = null;
+        this.jobStatus = 'queued';
+        this.pollingMessage = 'Submitting analysis job to the backend…';
+
+        this.api.startFileAnalysisJob(formData, systemHintValue).subscribe({
+            next: (res) => {
+                this.jobId = res.job_id;
+                this.jobStatus = 'running';
+                this.pollingMessage = 'Job started. Polling for results…';
+                this.startPolling();
             },
             error: (err: unknown) => {
+                this.jobStatus = 'error';
                 this.isFileLoading = false;
                 const msg =
-                    err instanceof Error ? err.message : 'Error during file analysis';
+                    err instanceof Error
+                        ? err.message
+                        : 'Error during file analysis job start.';
                 this.fileError = msg;
+                this.pollingMessage = 'Could not start file analysis job.';
             },
         });
+    }
+
+    onCancelPolling(): void {
+        this.stopPolling();
+        this.jobStatus = 'cancelled';
+        this.pollingMessage = 'Polling cancelled by user.';
+    }
+
+    private startPolling(): void {
+        if (!this.jobId) {
+            return;
+        }
+
+        this.stopPolling();
+        this.isFileLoading = true;
+
+        this.pollingSub = interval(2000)
+            .pipe(
+                switchMap(() =>
+                    this.api.getFileAnalysisJobStatus(this.jobId as string),
+                ),
+            )
+            .subscribe({
+                next: (res: FileAnalyzeJobStatusResponse) => {
+                    if (res.status === 'pending') {
+                        this.jobStatus = 'queued';
+                        this.pollingMessage = 'Job is queued on the server…';
+                        return;
+                    }
+
+                    if (res.status === 'running') {
+                        this.jobStatus = 'running';
+                        this.pollingMessage = 'Job is running on the server…';
+                        return;
+                    }
+
+                    if (res.status === 'done') {
+                        this.jobStatus = 'done';
+                        this.isFileLoading = false;
+                        this.stopPolling();
+                        this.fileResult = res.result ?? null;
+                        this.pollingMessage = 'Analysis completed successfully.';
+                        return;
+                    }
+
+                    if (res.status === 'error') {
+                        this.jobStatus = 'error';
+                        this.isFileLoading = false;
+                        this.stopPolling();
+                        this.fileError = res.error || 'Job failed on the server.';
+                        this.pollingMessage = 'Job failed.';
+                        return;
+                    }
+
+                    if (res.status === 'cancelled') {
+                        this.jobStatus = 'cancelled';
+                        this.isFileLoading = false;
+                        this.stopPolling();
+                        this.pollingMessage = 'Job was cancelled on the server.';
+                    }
+                },
+                error: (err: unknown) => {
+                    this.jobStatus = 'error';
+                    this.isFileLoading = false;
+                    this.stopPolling();
+                    const msg =
+                        err instanceof Error
+                            ? err.message
+                            : 'Error while polling file job status.';
+                    this.fileError = msg;
+                    this.pollingMessage = 'Lost connection while polling job.';
+                },
+            });
+    }
+
+    private stopPolling(): void {
+        if (this.pollingSub) {
+            this.pollingSub.unsubscribe();
+            this.pollingSub = null;
+        }
+        this.isFileLoading = false;
     }
 }

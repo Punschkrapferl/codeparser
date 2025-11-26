@@ -54,16 +54,35 @@
     <div class="actions-row actions-row-inline">
         <button type="button" [disabled]="isFileLoading || !healthOk || !hasFilesSelected" (click)="onAnalyzeFiles()">
             <span *ngIf="!isFileLoading">Start file / folder analysis</span>
-            <span *ngIf="isFileLoading">Analysing files…</span>
+            <span *ngIf="isFileLoading">Job running…</span>
         </button>
 
         <button type="button" class="secondary" (click)="resetFileAnalyzer()">
             Reset
         </button>
+
+        <button type="button" class="secondary cancel" *ngIf="isFileLoading" (click)="onCancelPolling()">
+            Cancel polling
+        </button>
     </div>
 
     <div class="error global-error" *ngIf="fileError">
         {{ fileError }}
+    </div>
+
+    <!-- Job notification (status badge + message) -->
+    <div class="notification" *ngIf="pollingMessage">
+        <span class="badge" [ngClass]="jobStatus">
+            <ng-container [ngSwitch]="jobStatus">
+                <span *ngSwitchCase="'queued'">Queued</span>
+                <span *ngSwitchCase="'running'">Running</span>
+                <span *ngSwitchCase="'done'">Done</span>
+                <span *ngSwitchCase="'error'">Error</span>
+                <span *ngSwitchCase="'cancelled'">Cancelled</span>
+                <span *ngSwitchDefault>Idle</span>
+            </ng-container>
+        </span>
+        <span class="message">{{ pollingMessage }}</span>
     </div>
 
     <div class="file-status" *ngIf="isFileLoading">
