@@ -1,12 +1,14 @@
-import { mergeApplicationConfig, ApplicationConfig } from '@angular/core';
-import { provideServerRendering, withRoutes } from '@angular/ssr';
-import { appConfig } from './app.config';
-import { serverRoutes } from './app.routes.server';
+import { ApplicationConfig } from '@angular/core';
+import { provideServerRendering } from '@angular/platform-server';
+import { provideRouter } from '@angular/router';
+import { routes } from './app.routes';
+import { provideHttpClient, withFetch } from '@angular/common/http';
 
-const serverConfig: ApplicationConfig = {
+export const appConfigServer: ApplicationConfig = {
   providers: [
-    provideServerRendering(withRoutes(serverRoutes))
-  ]
+    provideServerRendering(),
+    provideRouter(routes),
+    // HttpClient for SSR using fetch
+    provideHttpClient(withFetch()),
+  ],
 };
-
-export const config = mergeApplicationConfig(appConfig, serverConfig);

@@ -1,170 +1,20 @@
-<div class="app-container">
-  <header class="app-header">
-    <h1>{{ title }}</h1>
-    <p class="subtitle">
-      Analyze GitHub repositories and local code with a LLM-backend parser.
-    </p>
+<header class="app-header">
+  <h1>{{ title }}</h1>
+  <p class="subtitle">
+    Analyze GitHub repositories and local code with an LLM-backend parser.
+  </p>
 
-    <div class="health-indicator" *ngIf="healthOk !== null">
-      <span class="dot" [ngClass]="{ ok: healthOk === true, fail: healthOk === false }"></span>
+  <div class="health-indicator">
+    <span class="dot" [ngClass]="{ ok: healthOk === true, fail: healthOk === false }"></span>
 
-      <span *ngIf="healthOk === true">Backend: healthy</span>
-      <span *ngIf="healthOk === false">Backend: unreachable</span>
-      <span *ngIf="healthOk === null">Checking backend…</span>
-    </div>
-  </header>
+    <span *ngIf="healthOk === null">Checking backend…</span>
+    <span *ngIf="healthOk === true">Backend: healthy</span>
+    <span *ngIf="healthOk === false">Backend: unreachable</span>
+  </div>
+</header>
 
-  <main class="content">
-    <!-- GitHub Analyser Card -->
-    <section class="card">
-      <h2>GitHub repository analyser</h2>
+<main class="content">
+  <app-github-analyzer [healthOk]="healthOk"></app-github-analyzer>
 
-      <form [formGroup]="form" (ngSubmit)="onSubmit()">
-        <div class="form-group">
-          <label for="repoUrl">Repository URL</label>
-          <input id="repoUrl" type="url" formControlName="repoUrl" placeholder="https://github.com/user/repo.git" />
-          <div class="error" *ngIf="repoUrl?.invalid && repoUrl?.touched">
-            Please enter a valid repository URL (min. 5 characters).
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label for="systemHint">System hint (optional)</label>
-          <textarea id="systemHint" rows="3" formControlName="systemHint"
-            placeholder="Explain how you want the code to be reviewed..."></textarea>
-        </div>
-
-        <div class="actions-row actions-row-inline">
-          <button type="submit" [disabled]="isLoading || !healthOk || form.invalid">
-            <span *ngIf="!isLoading">Analyse repository</span>
-            <span *ngIf="isLoading">Analysing…</span>
-          </button>
-
-          <button type="button" class="secondary" (click)="resetGithubAnalyzer()">
-            Reset
-          </button>
-        </div>
-
-        <div class="error global-error" *ngIf="errorMessage">
-          {{ errorMessage }}
-        </div>
-      </form>
-
-      <!-- META + RESULT VIEWER FOR GITHUB -->
-      <section class="analysis" *ngIf="lastResult">
-        <div class="meta">
-          <p><strong>Repo path:</strong> {{ lastResult.repo_path }}</p>
-          <p><strong>Source file:</strong> {{ lastResult.source_file }}</p>
-          <p><strong>Batches:</strong> {{ lastResult.batches }}</p>
-          <p><strong>Parts:</strong> {{ lastResult.num_parts }}</p>
-          <p>
-            <strong>Languages:</strong>
-            {{ lastResult.languages.length ? lastResult.languages.join(', ') : 'n/a' }}
-          </p>
-        </div>
-
-        <app-result-viewer [title]="'GitHub repo analysis'" [analysis]="lastResult.analysis"></app-result-viewer>
-      </section>
-    </section>
-
-    <!-- File / Folder Analyzer Card -->
-    <section class="card">
-      <h2>File / folder analyser</h2>
-
-      <div class="form-group top-gap">
-        <label>Choose files or a folder</label>
-        <div class="button-row">
-          <button type="button" (click)="onClickFileInput()">
-            Select files…
-          </button>
-          <button type="button" (click)="onClickFolderInput()">
-            Select folder…
-          </button>
-        </div>
-
-        <!-- Visually hidden labels, but associated to inputs -->
-        <label for="fileInput" class="sr-only">Select one or more files</label>
-        <input id="fileInput" #fileInput type="file" class="hidden-file-input" multiple
-          (change)="onFileSelected($event)" />
-
-        <label for="folderInput" class="sr-only">Select a folder to analyse</label>
-        <input id="folderInput" #folderInput type="file" class="hidden-file-input" webkitdirectory directory multiple
-          (change)="onFolderSelected($event)" />
-      </div>
-
-      <div class="drop-zone" [class.drag-over]="isDragActive" (dragover)="onFileDragOver($event)"
-        (dragleave)="onFileDragLeave($event)" (drop)="onFileDrop($event)">
-        <p>Drag &amp; drop files or a folder here.</p>
-        <p class="hint">Code, JSONL, or plain-text files work best.</p>
-      </div>
-
-      <div class="file-info" *ngIf="hasFilesSelected">
-        <p *ngIf="folderFileCount === 1">
-          <strong>1 item selected:</strong>
-        </p>
-        <p *ngIf="folderFileCount > 1">
-          <strong>{{ folderFileCount }} items selected:</strong>
-        </p>
-
-        <ul>
-          <li *ngFor="let f of selectedFiles">
-            <code>{{ fileDisplayName(f) }}</code>
-          </li>
-        </ul>
-      </div>
-
-      <div class="actions-row actions-row-inline">
-        <button type="button" [disabled]="isFileLoading || !healthOk || !hasFilesSelected" (click)="onAnalyzeFiles()">
-          <span *ngIf="!isFileLoading">Start file / folder analysis</span>
-          <span *ngIf="isFileLoading">Analysing files…</span>
-        </button>
-
-        <button type="button" class="secondary" (click)="resetFileAnalyzer()">
-          Reset
-        </button>
-      </div>
-
-      <div class="error global-error" *ngIf="fileError">
-        {{ fileError }}
-      </div>
-
-      <div class="file-status" *ngIf="isFileLoading">
-        <div class="spinner" aria-hidden="true"></div>
-        <span>Calling backend and LLM…</span>
-      </div>
-
-      <!-- META + RESULT VIEWER FOR FILES -->
-      <section class="analysis" *ngIf="fileResult">
-        <div class="meta">
-          <p><strong>Batches:</strong> {{ fileResult.batches }}</p>
-          <p>
-            <strong>Languages:</strong>
-            {{ fileResult.languages.length ? fileResult.languages.join(', ') : 'n/a' }}
-          </p>
-          <p *ngIf="fileResult.num_files !== undefined || fileResult.total_parts !== undefined">
-            <strong>Files:</strong> {{ fileResult.num_files ?? 0 }} •
-            <strong>Total parts:</strong>
-            {{ fileResult.total_parts ?? fileResult.num_parts ?? 0 }}
-          </p>
-        </div>
-
-        <div class="file-summary-toggle" *ngIf="fileResult.file_summaries?.length">
-          <label>
-            <input type="checkbox" [checked]="showFileSummaries" (change)="showFileSummaries = !showFileSummaries" />
-            Show per-file summary ({{ fileResult.file_summaries?.length ?? 0 }})
-          </label>
-
-          <ul *ngIf="showFileSummaries">
-            <li *ngFor="let f of fileResult.file_summaries">
-              <code>{{ f.filename }}</code>
-              <span *ngIf="f.num_parts > 1"> – {{ f.num_parts }} parts</span>
-            </li>
-          </ul>
-
-        </div>
-
-        <app-result-viewer [title]="'File / folder analysis'" [analysis]="fileResult.analysis"></app-result-viewer>
-      </section>
-    </section>
-  </main>
-</div>
+  <app-file-analyzer [healthOk]="healthOk"></app-file-analyzer>
+</main>

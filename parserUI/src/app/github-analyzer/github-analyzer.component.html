@@ -1,0 +1,73 @@
+<section class="card">
+    <h2>GitHub repository analyser</h2>
+
+    <form [formGroup]="form" (ngSubmit)="onSubmit()">
+        <div class="form-group">
+            <label for="repoUrl">Repository URL</label>
+            <input id="repoUrl" type="url" formControlName="repoUrl" placeholder="https://github.com/user/repo.git" />
+            <div class="error" *ngIf="repoUrl?.invalid && repoUrl?.touched">
+                Please enter a valid repository URL (min. 5 characters).
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="systemHint">System hint (optional)</label>
+            <textarea id="systemHint" rows="3" formControlName="systemHint"
+                placeholder="Explain how you want the code to be reviewed..."></textarea>
+        </div>
+
+        <div class="actions-row actions-row-inline">
+            <button type="submit" [disabled]="!healthOk || form.invalid || isPolling">
+                <span *ngIf="!isPolling">Start analysis</span>
+                <span *ngIf="isPolling">Job running…</span>
+            </button>
+
+            <button type="button" class="secondary" (click)="resetGithubAnalyzer()">
+                Reset
+            </button>
+
+            <button type="button" class="secondary cancel" *ngIf="isPolling" (click)="onCancelPolling()">
+                Cancel polling
+            </button>
+        </div>
+
+        <div class="error global-error" *ngIf="errorMessage">
+            {{ errorMessage }}
+        </div>
+    </form>
+
+    <!-- Notification / job status -->
+    <div class="notification" *ngIf="pollingMessage">
+        <span class="badge" [ngClass]="jobStatus">
+            <ng-container [ngSwitch]="jobStatus">
+                <span *ngSwitchCase="'queued'">Queued</span>
+                <span *ngSwitchCase="'running'">Running</span>
+                <span *ngSwitchCase="'done'">Done</span>
+                <span *ngSwitchCase="'error'">Error</span>
+                <span *ngSwitchCase="'cancelled'">Cancelled</span>
+                <span *ngSwitchDefault>Idle</span>
+            </ng-container>
+        </span>
+        <span class="message">{{ pollingMessage }}</span>
+    </div>
+
+    <!-- META + RESULT VIEWER FOR GITHUB -->
+    <section class="analysis" *ngIf="lastResult">
+        <div class="meta">
+            <p><strong>Repo path:</strong> {{ lastResult.repo_path }}</p>
+            <p><strong>Source file:</strong> {{ lastResult.source_file }}</p>
+            <p><strong>Batches:</strong> {{ lastResult.batches }}</p>
+            <p><strong>Parts:</strong> {{ lastResult.num_parts }}</p>
+            <p>
+                <strong>Languages:</strong>
+                {{
+                lastResult.languages.length
+                ? lastResult.languages.join(', ')
+                : 'n/a'
+                }}
+            </p>
+        </div>
+
+        <app-result-viewer [title]="'GitHub repo analysis'" [analysis]="lastResult.analysis"></app-result-viewer>
+    </section>
+</section>

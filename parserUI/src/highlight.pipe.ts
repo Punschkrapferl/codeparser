@@ -26,8 +26,6 @@ export class HighlightPipe implements PipeTransform {
       return '';
     }
     if (!search || !search.trim()) {
-      // Should only be used when searchTerm is set,
-      // but keep this as a safe default.
       return this.sanitizer.bypassSecurityTrustHtml(this.escapeHtml(text));
     }
 

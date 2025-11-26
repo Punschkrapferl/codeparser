@@ -3,12 +3,17 @@ import asyncio
 import json
 import logging
 import math
+import os
 from pathlib import Path
 
 from pydantic import BaseModel
 
-from api.api_main import BATCH_SIZE
-from api.llm_client import call_llm, logger
+from api.llm_client import call_llm, logger as llm_logger
+
+# Local batch-size config (so we don't import from api_main and create cycles)
+BATCH_SIZE = int(os.getenv("BATCH_SIZE", "4"))
+
+logger = logging.getLogger(__name__)
 
 
 def _guess_language_from_name(filename: Optional[str]) -> str:
@@ -143,7 +148,7 @@ async def _analyze_parts(
     n_batches = math.ceil(len(parts) / BATCH_SIZE)
 
     for i in range(n_batches):
-        batch = parts[i * BATCH_SIZE : (i + 1) * BATCH_SIZE]
+        batch = parts[i * BATCH_SIZE: (i + 1) * BATCH_SIZE]
         logger.info(
             "analyze_parts: batch %d / %d (size=%d)",
             i + 1,
@@ -185,7 +190,7 @@ async def _analyze_parts(
         try:
             analysis = await call_llm(prompt)
         except Exception as e:
-            logger.exception(
+            llm_logger.exception(
                 "analyze_parts: unexpected error in call_llm for batch %d: %s", i, e
             )
             analysis = f"[Batch {i} unexpected error] {e}"
