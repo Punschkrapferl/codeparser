@@ -1,0 +1,11 @@
+<div class="toast-wrapper" *ngIf="(toasts$ | async)?.length">
+    <div class="toast" *ngFor="let toast of toasts$ | async; trackBy: trackById" [ngClass]="toast.type">
+        <div class="toast-message">
+            {{ toast.message }}
+        </div>
+
+        <button type="button" class="toast-close" (click)="dismiss(toast.id)" aria-label="Dismiss notification">
+            ×
+        </button>
+    </div>
+</div>

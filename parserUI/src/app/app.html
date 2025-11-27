@@ -1,20 +1,25 @@
-<header class="app-header">
-  <h1>{{ title }}</h1>
-  <p class="subtitle">
-    Analyze GitHub repositories and local code with an LLM-backend parser.
-  </p>
+<div class="app-container">
+  <!-- Global toast notifications -->
+  <app-toast-container></app-toast-container>
 
-  <div class="health-indicator">
-    <span class="dot" [ngClass]="{ ok: healthOk === true, fail: healthOk === false }"></span>
+  <header class="app-header">
+    <h1>{{ title }}</h1>
+    <p class="subtitle">
+      Analyze GitHub repositories and local code with an LLM-backend parser.
+    </p>
 
-    <span *ngIf="healthOk === null">Checking backend…</span>
-    <span *ngIf="healthOk === true">Backend: healthy</span>
-    <span *ngIf="healthOk === false">Backend: unreachable</span>
-  </div>
-</header>
+    <div class="health-indicator">
+      <span class="dot" [ngClass]="{ ok: healthOk === true, fail: healthOk === false }"></span>
 
-<main class="content">
-  <app-github-analyzer [healthOk]="healthOk"></app-github-analyzer>
+      <span *ngIf="healthOk === null">Checking backend…</span>
+      <span *ngIf="healthOk === true">Backend: healthy</span>
+      <span *ngIf="healthOk === false">Backend: unreachable</span>
+    </div>
+  </header>
 
-  <app-file-analyzer [healthOk]="healthOk"></app-file-analyzer>
-</main>
+  <main class="content">
+    <app-github-analyzer [healthOk]="healthOk"></app-github-analyzer>
+
+    <app-file-analyzer [healthOk]="healthOk"></app-file-analyzer>
+  </main>
+</div>
