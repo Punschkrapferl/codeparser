@@ -8,6 +8,9 @@ services:
       - "8000:8000"
     volumes:
       - ./repos:/app/repos
+    environment:
+      OLLAMA_HOST: http://host.docker.internal:11434
+      MODEL_NAME: mistral:latest
 
   frontend:
     build:
