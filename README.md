@@ -8,17 +8,54 @@ The project is containerised so that anyone (e.g. recruiters) can run it with a 
 ## Note for reviewers / recruiters
 
 - You can run this project **locally in a few minutes** using Docker; no manual Python / Node setup is required.
-- The analysis step uses a **local LLM via Ollama** (free, CPU/GPU dependent).
-    - On the **first analysis request**, Ollama may need to **pull and load the model**, which can take **up to ~5 minutes** depending on your machine.
-    - Subsequent analyses are significantly faster because the model stays in memory.
-- For a quick end‑to‑end demo, you can:
-    1. Start the stack with Docker (see [Quick start](#quick-start-docker--recommended)).
-    2. Open `http://localhost:4200`.
-    3. In the GitHub analyser, paste the URL of one of my public repositories, for example:  
-       `https://github.com/<your-github-username>/<another-public-repo>`  
-       (any public repo works; using one of my own repos shows how the tool analyses a real project of mine).
-    4. Click **Analyze** and wait for the pipeline + LLM summary.  
-       If this is the first ever run with the model on your machine, the LLM step may take a few minutes while Ollama warms up.
+- The `docker-compose.yml` file is configured to **pull prebuilt images from Docker Hub**:
+    - Backend image: `punschkrapferl23/codeparser-backend:latest`
+    - Frontend image: `punschkrapferl23/codeparser-frontend:latest`
+- The analysis pipeline:
+    - clones a target GitHub repository,
+    - parses it with a Go-based static analyser,
+    - then calls a **local LLM via Ollama** (free, CPU/GPU dependent) to generate higher-level summaries.
+- The LLM step always runs the repository through the model in **batches with limited chunk sizes**.  
+  With a local Ollama model, this means:
+    - Each full analysis is relatively heavy and can easily take **up to ~5 minutes** on a typical laptop.
+    - This is not just a one-time startup cost; every analysis will process all batches again.
+- To keep the overall waiting time reasonable, please use a **small repository** for your first run.  
+  Recommended demo repo (one of my own projects):
+
+  ```text
+  https://github.com/Punschkrapferl/MovieGold
+  ```
+
+  This repository is intentionally small, so most of the waiting time comes from the LLM step rather than git cloning.
+
+**Suggested quick demo flow:**
+
+1. Ensure Docker Desktop is running.
+2. (Optional but recommended for full LLM analysis) Install Ollama and pull the model (see [Prerequisites](#prerequisites)).
+3. Clone the repository:
+
+   ```bash
+   git clone https://github.com/<your-username>/codeparser.git
+   cd codeparser
+   ```
+
+4. Start the stack (this will **pull prebuilt images** from Docker Hub):
+
+   ```bash
+   docker compose up
+   ```
+
+5. Open the frontend: `http://localhost:4200`.
+6. In the GitHub analyser, paste:
+
+   ```text
+   https://github.com/Punschkrapferl/MovieGold
+   ```
+
+7. Click **Analyze** and wait for the pipeline + LLM summary.  
+   Depending on your machine and the LLM model, this can take **up to a few minutes per run**.
+
+> If Ollama is not running, the core static analysis still works; only the LLM summary section will be missing or replaced by a short “LLM unavailable” message.
 
 ---
 
@@ -29,10 +66,9 @@ The project is containerised so that anyone (e.g. recruiters) can run it with a 
 - [Project structure](#project-structure)
 - [Prerequisites](#prerequisites)
 - [Quick start (Docker – recommended)](#quick-start-docker--recommended)
-    - [Build images](#1-build-images)
-    - [Run the stack](#2-run-the-stack)
-    - [Use the app](#3-use-the-app)
-    - [Stop the stack](#4-stop-the-stack)
+    - [Run the stack (using prebuilt images)](#1-run-the-stack-using-prebuilt-images)
+    - [Use the app](#2-use-the-app)
+    - [Stop the stack](#3-stop-the-stack)
 - [Local development without Docker](#local-development-without-docker)
     - [Backend (FastAPI)](#backend-fastapi)
     - [Frontend (Angular)](#frontend-angular)
@@ -69,8 +105,8 @@ High-level components:
 
 Everything is orchestrated with **Docker Compose**:
 
-- `backend` service: builds from `Dockerfile.backend`, exposes port `8000`.
-- `frontend` service: builds from `parserUI/Dockerfile`, serves Angular app on port `4200`.
+- `backend` service: uses prebuilt image `punschkrapferl23/codeparser-backend:latest` (originally built from `Dockerfile.backend`).
+- `frontend` service: uses prebuilt image `punschkrapferl23/codeparser-frontend:latest` (originally built from `parserUI/Dockerfile`), serving the Angular app on port `4200`.
 
 ---
 
@@ -94,7 +130,7 @@ Everything is orchestrated with **Docker Compose**:
     - Nginx (runtime)
 
 - **LLM / analysis**
-    - Local LLM served via **Ollama** (free; first model load can take several minutes)
+    - Local LLM served via **Ollama** (free; each run processes the repository in batches)
 
 - **Containerisation**
     - Docker
@@ -134,9 +170,12 @@ To run with Docker (recommended):
 
 To use LLM-based analysis (optional but recommended):
 
-- [Ollama](https://ollama.com/) installed and running locally, with a suitable model pulled (for example, `llama3` or similar).
-    - The backend expects an Ollama endpoint reachable from inside the container (e.g. via `http://host.docker.internal:11434` or as configured in environment variables).
-    - First model load can take **up to ~5 minutes**.
+- [Ollama](https://ollama.com/) installed and running locally, with a suitable model pulled (for example, `mistral:latest` or `llama3`).
+    - The backend expects an Ollama endpoint reachable from inside the container, configured via environment variable:
+        - `OLLAMA_HOST` (in `docker-compose.yml`, set to `http://host.docker.internal:11434`)
+        - `MODEL_NAME` (e.g. `mistral:latest`)
+    - First model pull + load can take **several minutes**.
+    - Subsequent runs re-use the loaded model but still need time for all batches to be processed.
 
 To develop without Docker (optional):
 
@@ -154,42 +193,19 @@ All commands below are run from the project root folder, e.g.:
 cd codeparser
 ```
 
-### 1. Build images
+### 1. Run the stack (using prebuilt images)
 
-The first time (or after changing Dockerfiles / requirements):
-
-```bash
-docker compose build
-```
-
-This performs:
-
-- Build **backend image** from `Dockerfile.backend`.
-- Build **frontend image** from `parserUI/Dockerfile`.
-- Cache Python and Node dependencies for faster rebuilds.
-
-You can always rebuild just one service, for example:
-
-```bash
-docker compose build backend
-docker compose build frontend
-```
-
-### 2. Run the stack
-
-Start both services:
+The repo’s `docker-compose.yml` already references prebuilt Docker Hub images, so you **do not need to build** anything for a first run.
 
 ```bash
 docker compose up
 ```
 
-Expected output:
+Docker will:
 
-- A `codeparser-backend` container with FastAPI starting under Uvicorn.
-- A `codeparser-frontend` container with Nginx serving the Angular build.
-- Log lines similar to:
-    - `Uvicorn running on http://0.0.0.0:8000`
-    - `nginx/1.28.0` startup messages
+- Pull `punschkrapferl23/codeparser-backend:latest` and `punschkrapferl23/codeparser-frontend:latest` if they are not present locally.
+- Start both containers and connect them to a shared network.
+- Mount `./repos` from the host into `/app/repos` inside the backend container.
 
 To run detached (background):
 
@@ -208,9 +224,9 @@ You should see:
 - `codeparser-backend` – `running`
 - `codeparser-frontend` – `running`
 
-> **Important:** On the **first end‑to‑end analysis**, the LLM step (via Ollama) may take **up to ~5 minutes** while the model is pulled and loaded. This is expected for a free local setup. Later requests are much faster.
+> **Important:** On a full analysis with the LLM enabled, the Ollama step can take **up to ~5 minutes** for a small repo on a typical laptop.
 
-### 3. Use the app
+### 2. Use the app
 
 Open in a browser:
 
@@ -223,12 +239,13 @@ Open in a browser:
 Typical workflow in the UI (may vary slightly depending on the current version):
 
 1. **GitHub repository analyser**
-    - Enter a GitHub repository URL (for example, one of my public repos from my GitHub profile).
+    - Enter a GitHub repository URL (for example, the recommended demo repo:  
+      `https://github.com/Punschkrapferl/MovieGold`)
     - Click the **Analyze** button.
     - The frontend calls the backend, which:
         - clones the repository into `/app/repos` (visible as `./repos` on the host),
         - runs the Go parser and aggregates results,
-        - optionally calls the LLM via Ollama to summarise findings,
+        - calls the LLM via Ollama to summarise findings (if Ollama is running),
         - returns structured analysis to the UI.
 
 2. **Folder / file analyser**
@@ -238,7 +255,7 @@ Typical workflow in the UI (may vary slightly depending on the current version):
 
 Both flows can show status updates / progress and then render the analysis (e.g. file tree, metrics, summaries, etc.).
 
-### 4. Stop the stack
+### 3. Stop the stack
 
 In the terminal running `docker compose up`:
 
@@ -324,43 +341,42 @@ This section explains “what to run and when” from a developer’s point of v
    cd codeparser
    ```
 
-2. Build Docker images (once, or whenever dependencies change):
-
-   ```bash
-   docker compose build
-   ```
-
-3. Start the stack:
+2. Start the stack (using prebuilt images):
 
    ```bash
    docker compose up
    ```
 
-4. Use the app via the browser (`:4200`) and the API docs (`:8000/docs`).
+3. Use the app via the browser (`:4200`) and the API docs (`:8000/docs`).
 
 ### Normal development cycle
 
-When you change **only code** (not requirements):
+When you change **only code** (not dependencies):
 
-1. Start services (will reuse existing images):
+- For recruiters using prebuilt images, no rebuild step is required; they just run `docker compose up` again.
+- For your own development:
+    - You can build new images locally (see below) and retag/push them to Docker Hub, then `docker compose up` will use the updated tags.
 
-   ```bash
-   docker compose up
-   ```
+When you change **dependencies** (`api/requirements.txt` or `parserUI/package*.json`), and want new images:
 
-2. Edit code in your editor/IDE.
-3. When you want a clean restart, stop with `Ctrl + C` and start again.
-
-When you change **dependencies** (`api/requirements.txt` or `parserUI/package*.json`):
-
-1. Rebuild the affected image:
+1. Build local images manually, e.g.:
 
    ```bash
-   docker compose build backend   # for Python dependency changes
-   docker compose build frontend  # for Angular/Node dependency changes
+   # Backend
+   docker build -f Dockerfile.backend -t punschkrapferl23/codeparser-backend:latest .
+
+   # Frontend
+   docker build -f parserUI/Dockerfile -t punschkrapferl23/codeparser-frontend:latest parserUI
    ```
 
-2. Restart:
+2. Push them (optional, for sharing with others):
+
+   ```bash
+   docker push punschkrapferl23/codeparser-backend:latest
+   docker push punschkrapferl23/codeparser-frontend:latest
+   ```
+
+3. Restart:
 
    ```bash
    docker compose up
@@ -370,8 +386,10 @@ When you change **dependencies** (`api/requirements.txt` or `parserUI/package*.j
 
 - `docker-compose.yml`
     - Defines two services: `backend` and `frontend`.
+    - Uses prebuilt images from Docker Hub.
     - Maps backend port `8000` and frontend port `4200` to the host.
     - Mounts `./repos` on the host into `/app/repos` in the backend container.
+    - Passes `OLLAMA_HOST` and `MODEL_NAME` to the backend.
 
 - `Dockerfile.backend`
     - Base: `python:3.12-slim`.
@@ -396,7 +414,7 @@ When you change **dependencies** (`api/requirements.txt` or `parserUI/package*.j
 
 ### Backend tests (pytest)
 
-Inside Docker:
+Inside Docker (using the backend image):
 
 ```bash
 docker compose run --rm backend pytest
@@ -404,7 +422,7 @@ docker compose run --rm backend pytest
 
 This:
 
-- Starts a temporary `backend` container.
+- Starts a temporary `backend` container from the prebuilt image.
 - Runs `pytest` inside it.
 - Cleans up the container afterwards.
 
@@ -442,9 +460,9 @@ Cannot connect to the Docker daemon at unix:///.../docker.sock. Is the docker da
 - Make sure Docker Desktop is running.
 - On Linux, ensure your user is in the `docker` group or use `sudo`.
 
-### Backend container exits with `python-multipart` error
+### Backend container exits with `python-multipart` error (local builds)
 
-Error:
+Error (for local image builds):
 
 ```text
 RuntimeError: Form data requires "python-multipart" to be installed.
@@ -453,11 +471,10 @@ RuntimeError: Form data requires "python-multipart" to be installed.
 Fix (already applied in this project):
 
 - Ensure `python-multipart` is present in `api/requirements.txt`.
-- Rebuild backend:
+- Rebuild backend image locally:
 
   ```bash
-  docker compose build backend
-  docker compose up
+  docker build -f Dockerfile.backend -t punschkrapferl23/codeparser-backend:latest .
   ```
 
 ### Async tests fail with “async def functions are not natively supported”
@@ -471,10 +488,10 @@ Fix (already applied in this project):
       asyncio: mark test as asyncio
   ```
 
-- Rebuild and rerun tests:
+- Rebuild and rerun tests in Docker if needed:
 
   ```bash
-  docker compose build backend
+  docker build -f Dockerfile.backend -t punschkrapferl23/codeparser-backend:latest .
   docker compose run --rm backend pytest
   ```
 
