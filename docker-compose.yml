@@ -1,9 +1,6 @@
 services:
   backend:
-    build:
-      context: .
-      dockerfile: Dockerfile.backend
-    container_name: codeparser-backend
+    image: punschkrapferl23/codeparser-backend:latest
     ports:
       - "8000:8000"
     volumes:
@@ -13,10 +10,7 @@ services:
       MODEL_NAME: mistral:latest
 
   frontend:
-    build:
-      context: ./parserUI
-      dockerfile: Dockerfile
-    container_name: codeparser-frontend
+    image: punschkrapferl23/codeparser-frontend:latest
     ports:
       - "4200:80"
     depends_on:
