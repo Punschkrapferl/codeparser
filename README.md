@@ -363,7 +363,7 @@ When you change **dependencies** (`api/requirements.txt` or `parserUI/package*.j
 
    ```bash
    # Backend
-   docker build -f Dockerfile.backend -t punschkrapferl23/codeparser-backend:latest .
+   docker build -f Dockerfile -t punschkrapferl23/codeparser-backend:latest .
 
    # Frontend
    docker build -f parserUI/Dockerfile -t punschkrapferl23/codeparser-frontend:latest parserUI
@@ -474,7 +474,7 @@ Fix (already applied in this project):
 - Rebuild backend image locally:
 
   ```bash
-  docker build -f Dockerfile.backend -t punschkrapferl23/codeparser-backend:latest .
+  docker build -f Dockerfile -t punschkrapferl23/codeparser-backend:latest .
   ```
 
 ### Async tests fail with “async def functions are not natively supported”
@@ -491,7 +491,7 @@ Fix (already applied in this project):
 - Rebuild and rerun tests in Docker if needed:
 
   ```bash
-  docker build -f Dockerfile.backend -t punschkrapferl23/codeparser-backend:latest .
+  docker build -f Dockerfile -t punschkrapferl23/codeparser-backend:latest .
   docker compose run --rm backend pytest
   ```
 
