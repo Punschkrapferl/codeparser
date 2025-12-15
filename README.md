@@ -9,7 +9,6 @@ The project is containerised so that anyone (e.g. recruiters) can run it with a 
 Install **Docker** and **Ollama**. Ensure both are running.
 1. **Clone the repo & start the demo stack**
 ```bash
-
 git clone https://github.com/Punschkrapferl/codeparser.git
 cd codeparser
 docker compose -f docker-compose.demo.yml pull
@@ -373,6 +372,7 @@ Then visit `http://localhost:8080` instead of `8000`.
 ## License
 MIT License
 Copyright (c) 2025 Punschkrapferl
+
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
 in the Software without restriction, including without limitation the rights
